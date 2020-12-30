@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Solve- Cantilever Beam</title>
+    <link rel="stylesheet" href="sins/MOMstyle.css" />
+    <script src='sins/jquery.min.js'></script>
+    <script src='sins/jquery-ui.min.js'></script>
+    <script type="text/javascript" >
+
+        i = 0;
+        E=111000000;
+        I = 1;
+        l = (1000/2);
+        EI = 222000000000;
+        p = 10;
+        i = 0;
+
+        var amplitude  =300000;
+        var direction = false;
+        var zeta = 0.005;
+        var ptx = [];
+        var pty = [];
+        var grx = 0, gry = 0;
+        var j = 0;
+        var canvas;
+        var ctx;
+        // var simTimeId = setInterval("",'1000');
+        // var pauseTime = setInterval("",'1000');
+        var time=0;
+        var mass=0;
+        var flag  = true;
+        var step  = 0;
+        var screenchanges=0;
+
+        if(screenchanges==0)
+        {
+
+            ptx = [];pt1x = []; pt2x = [];pt3x = [];
+            pty = [];pt1y = [];pt2y = [];pt3y = [];
+
+            draw();
+        }
+
+        function startsim()
+        {
+            simTimeId=setInterval(" varupdate(); ",'100');
+        }
+        function screenchangef()
+        {
+
+            if(screenchanges<3)
+                screenchanges++;
+
+        }
+        function screenchangeb()
+        {
+
+            if(screenchanges>0)
+                screenchanges--;
+        }
+        function screenchange()
+        {
+            if(screenchanges>=3)
+            {
+                screenchanges=3;
+                document.getElementById('screenchangesforward').src="sins/bluefwddullsbw.png";
+            }
+            else
+            {
+                document.getElementById('screenchangesforward').src="sins/bluefwddulls.png";
+            }
+
+            if(screenchanges<=0)
+            {
+                screenchanges=0;
+                document.getElementById('screenchangesbackward').src="sins/bluebkdullsbw.png";
+            }
+            else
+            {
+                document.getElementById('screenchangesbackward').src="sins/bluebkdulls.png";
+            }
+
+        }
+
+        function simstate() {
+            if (flag===true){
+                document.getElementById('playpausebutton').src="sins/bluepausedull.png";
+                flag=false;
+
+                $('#l1spinner').spinner("disable");
+                $('#m1spinner').spinner("disable");
+                $('#lspinner').spinner("disable");
+                // $('#l4spinner').spinner("disable");
+                // $('#l5spinner').spinner("disable");
+
+                $('#l1slider').slider("disable");
+                $('#m1slider').slider("disable");
+                $('#lslider').slider("disable");
+                // $('#l4slider').slider("disable");
+                // $('#l5slider').slider("disable");
+            }
+            else {
+                document.getElementById('playpausebutton').src="sins/blueplaydull.png";
+                flag=true;
+                $('#l1spinner').spinner("enable");
+                $('#m1spinner').spinner("enable");
+                $('#lspinner').spinner("enable");
+                // $('#l4spinner').spinner("enable");
+                // $('#l5spinner').spinner("enable");
+
+                $('#l1slider').slider("enable");
+                $('#m1slider').slider("enable");
+                $('#lslider').slider("enable");
+                // $('#l4slider').slider("enable");
+                // $('#l5slider').slider("enable");
+            }
+        }
+
+        function varinit()
+        {
+            varchange();
+            $('#l1slider').slider("value", 0.5);
+            $('#l1spinner').spinner("value", 0.5);
+
+            $('#m1slider').slider("value", 300000);
+            $('#m1spinner').spinner("value", 300000);
+
+            $('#lslider').slider("value", 500);
+            $('#lspinner').spinner("value", 500);
+
+        }
+        function varchange()
+        {
+            $('#l1slider').slider({ max : 0.005, min : 0.001, step : 0.001 });
+            $('#l1spinner').spinner({ max : 0.005, min : 0.001, step : 0.001 });
+
+            $( "#l1slider" ).on( "slide", function( e, ui ) { $('#l1spinner').spinner("value",ui.value); ptx=[]; pty=[];j=0; grx=550;gry=290;amplitude  =300000;draw1();} );
+            $( "#l1spinner" ).on( "spin", function( e, ui ) { $('#l1slider').slider("value",ui.value); ptx=[]; pty=[]; j=0;  grx=550;gry=290;amplitude  =300000;draw1();} );
+            $( "#l1spinner" ).on( "change", function() {  varchange() } );
+
+            $('#m1slider').slider({ max : 400000, min : 200000, step : 25000 });
+            $('#m1spinner').spinner({ max : 400000, min : 200000, step : 25000 });
+
+            $( "#m1slider" ).on( "slide", function( e, ui ) { $('#m1spinner').spinner("value",ui.value); ptx=[]; pty=[]; j=0; grx=550;gry=290;amplitude  =300000;} );
+            $( "#m1spinner" ).on( "spin", function( e, ui ) { $('#m1slider').slider("value",ui.value); ptx=[]; pty=[]; j=0; grx=550;gry=290;amplitude  =300000;} );
+            $( "#m1spinner" ).on( "change", function() {  varchange() } );
+
+            $('#lslider').slider({ max : 400, min : 200, step : 50 });
+            $('#lspinner').spinner({ max : 400, min : 200, step : 50 });
+
+            $( "#lslider" ).on( "slide", function( e, ui ) { $('#lspinner').spinner("value",ui.value); ptx=[]; pty=[];j=0; grx=550;gry=290;amplitude  =300000; } );
+            $( "#lspinner" ).on( "spin", function( e, ui ) { $('#lslider').slider("value",ui.value); ptx=[]; pty=[]; j=0; grx=550;gry=290;amplitude  =300000;} );
+            $( "#lspinner" ).on( "change", function() {  varchange() } );
+            varupdate();
+
+        }
+
+        function varupdate()
+        {
+
+            $('#l1slider').slider("value", $('#l1spinner').spinner('value'));
+            $('#m1slider').slider("value", $('#m1spinner').spinner('value'));
+            $('#lslider').slider("value", $('#lspinner').spinner('value'));
+
+            zeta=$('#l1spinner').spinner("value");
+            m=$('#m1spinner').spinner("value");
+            l=$('#lspinner').spinner("value");
+            <!-- amplitude = m; -->
+            m = m/10000;
+
+
+            draw();
+            screenchange();
+
+
+        }
+        function draw1() {
+            zeta = document.getElementById("l1spinner").value;
+            document.getElementById("l1slider").value = zeta;
+
+            // p = document.getElementById("l1spinner").value;
+            // document.getElementById("l1slider").value = p;
+            varupdate();
+        }
+        function draw()
+        {
+            canvas = document.getElementById("simscreen");
+            ctx = canvas.getContext("2d");
+
+            i=i-20;
+
+            i=i%360;
+
+
+            if(i<0)
+                i+=360;
+
+            amplitude = amplitude/Math.exp((2*Math.PI*zeta)/Math.sqrt(1-Math.pow(zeta,2)));
+
+
+            console.log(amplitude)
+            if(amplitude< 50)
+            {
+                clearInterval(simTimeId);
+                console.log("Simulation stopped");
+            }
+
+
+            ctx.clearRect(0,0,550,400);
+//To draw static line;
+            ctx.beginPath();
+            ctx.lineWidth = 20;
+            // ctx.lineCap="round";
+            ctx.strokeStyle = "darkblue";
+            for(x = 50; x<= l; x+=10)
+            {
+                p = Math.sin(degToRad(i))*amplitude;
+                ctx.arc(x, 100+(p*Math.pow((x-100),2)*(3*l-(x-100)))/EI, 0, 0, 2*Math.PI, true);
+                ctx.stroke();
+            }
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.lineWidth = 20;
+            ctx.strokeStyle = "black";
+            ctx.lineTo(50,20);
+            ctx.lineTo(50,180);
+            ctx.stroke();
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = "blue";
+            ctx.moveTo(100,290);
+            ctx.lineTo(100,190);
+            // ctx.fillText("Amplitude", 10, 290);
+            ctx.lineTo(100,390);
+            ctx.moveTo(100,290);
+            ctx.lineTo(600,290);
+            // ctx.fillText("Time", 300, 350);
+            ctx.stroke();
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.lineWidth=1;
+            ctx.fillText("Amplitude", 10, 290);
+            ctx.fillText("Time", 300, 350);
+            <!-- ctx.font="12px 'Comic Sans MS'"; -->
+            ctx.fillStyle="black";
+            ctx.font='20px Arial';
+            ctx.fillText("Free vibration of cantilever beam", 100, 390);
+            ctx.closePath();
+
+            ctx.beginPath();
+            ctx.strokeStyle = "brown";
+            ctx.lineWidth = 2;
+            ctx.arc(x, 100+(p*Math.pow((x-100),2)*(3*l-(x-100)))/EI, 0+m, 0, 2*Math.PI, true);
+            ctx.fillStyle = 'brown';
+            ctx.fill();
+            ctx.stroke();
+            ctx.closePath();
+
+            ctx.strokeStyle = "black";
+            grx = 100;
+            gry = 290+(p*Math.pow((x-100),2)*(3*l-(x-100)))/EI;
+            ptx.push(grx+j);
+            pty.push(gry);
+            j = j+3;
+            plot_graph(ptx,pty,ctx,1000);
+
+            document.getElementById("p1").innerHTML = "Damping Ratio=  " + $('#l1spinner').spinner("value") + "";
+            document.getElementById("p2").innerHTML = "Mass = " + $('#m1spinner').spinner("value") + "";
+            document.getElementById("p3").innerHTML = "Length(mm)= " + $('#lspinner').spinner("value") + "";
+
+
+            document.getElementById("p4").innerHTML = "Damping Ratio=  " + $('#l1spinner').spinner("value") + "";
+            document.getElementById("p5").innerHTML = "Mass = " + $('#m1spinner').spinner("value") + "";
+            document.getElementById("p6").innerHTML = "Length(mm)= " + $('#lspinner').spinner("value") + "";
+        }
+
+        // function check1(value) {
+        //     if (value == 1) {
+        //         // alert("hi 1");
+        //         var canvas = document.getElementById('simscreen');
+        //         var ctx = canvas.getContext('2d');
+        //         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        //         document.getElementById("name").value = 1;
+        //         draw();
+        //     }
+        // }
+        // function draw() {
+        //     ctx.beginPath();
+        //     ctx.lineWidth = 2;
+        //     ctx.fillStyle = "yellow";
+        //     // Turn transparency on
+        //     ctx.rect(10, 10, 50, 25);
+        //     ctx.stroke();
+        //     ctx.closePath();
+        // }
+
+        function plot_graph(pt,pty,ctx,truncate,gcolor,lwidth)
+        {
+            console.log(j);
+            ctx.save();
+
+            ctx.beginPath();
+            ctx.lineWidth=lwidth;
+            ctx.strokeStyle=gcolor;
+            ctx.moveTo(pt[1],pty[1]);
+            a=0;
+
+            while(a<ptx.length)
+            {
+                ctx.lineTo(ptx[a],pty[a]);
+                a++;
+                if (a>=1000)
+                {
+                    pty.splice(0,1);
+                    a=a-1;
+                }
+            }
+            ctx.stroke();
+            ctx.closePath();
+            ctx.restore();
+            <!-- ctx.save(); -->
+            <!-- console.log("X: "+(grx+j)+" Y: "+gry); -->
+            <!-- console.log(pt); -->
+        }
+
+        function deg(vrad)
+        {
+            return vrad*180/Math.PI;
+        }
+
+
+        function rad(vdeg)
+        {
+            return vdeg*Math.PI/180;
+        }
+        function degToRad(deg)
+        {
+            return (Math.PI/180)*deg;
+        }
+
+
+    </script>
+
+</head>
+
+<body onload=" startsim(); varinit();">
+
+<!-- DND-Verifying JavaScript is enabled in browser -->
+<noscript>
+    The simulation requires JavaScript to be enabled.
+</noscript>
+
+<!-- Defining Container for Simulation -->
+<div id="container">
+
+    <!-- Replace TITLE with simulation title to be displayed next to logo-->
+    <div id="simtitle">VIBRATION OF CANTILEVER BEAM</div>
+
+    <!-- Region for simulation display -->
+    <canvas id="simscreen" height="400px" width="560px"></canvas>
+
+    <div id="titleincanvas"></div>
+
+    <div id="commentboxleft">
+        <p id="p1" style="line-height:0"></p>
+        <p id="p2" style="line-height:0"></p>
+        <p id="p3" style="line-height:0"></p>
+    </div>
+
+    <div id="commentboxright">
+        <p id="p4" style="line-height:0.2"></p>
+        <p id="p5" style="line-height:0.2"></p>
+        <p id="p6" style="line-height:0.4"></p>
+    </div>
+
+    <!-- DND-Title of region for variables display -->
+    <div id="vartitle">VARIABLES</div>
+
+    <!-- Region for Input parameters of simulation -->
+    <div id="variables">
+        <div class="variable">
+            <div class="varname" right="80px";><b>Material</b><br>
+                <select name="type" id="name" onchange="check1(this.value);enabled">
+                    <option value="select" disabled selected id="select1" >select</option>
+                    <option value="1">Steel</option>
+                    <option value="2">Aluminium</option>
+                    <option value="3">Bronze</option>
+                </select><br><br>
+            </div>
+            <div class="varname" left="-50px";><b>Cross-Section</b>
+                <select name="type" onmousedown="this.value='';" onchange="check2(this.value);">
+                    <option value="select" disabled selected id="select3" >select</option>
+                    <option value="1">I section</option>
+                    <option value="2">T section</option>
+                    <option value="3">C section</option>
+                    <option value="4">L section</option>
+                    <option value="5">Square section</option>
+                    <option value="6">Circular section</option>
+                    <option value="7">Other section</option>
+                </select>
+            </div><br><br>
+
+            <div class="varname"><p title="Link Length" style="font-size:95%;">Damping Ratio</p>
+                <input id="l1spinner"></div>
+            <div id="l1slider" ></div>
+            <br>
+            <div class="varname"><p title="Link Length" style="font-size:95%;">Mass </p>
+                <input id="m1spinner"></div>
+            <div id="m1slider"></div>
+            <br>
+            <div class="varname"><p title="Link Length" style="font-size:95%;">Length(mm)</p>
+                <input id="lspinner"></div>
+            <div id="lslider"></div>
+            <br>
+        </div>
+    </div>
+
+    <!-- DND-Title of region for controls display -->
+    <div id="ctrltitle">CONTROLS</div>
+
+    <!-- Region for User controls of simulation -->
+    <div id="controls">
+        <img id="playpausebutton" onclick="simstate();" src="sins/blueplaydull.png" />
+        <img id="rotationbutton" onclick="location.reload();" src="sins/bluecwdull.png" />
+        <img id="screenchangesforward" onclick="screenchangef()" src="sins/bluefwddulls.png" />
+        <img id="screenchangesbackward" onclick="screenchangeb()" src="sins/bluebkdulls.png" />
+
+    </div>
+
+
+    <!-- DND-Copyright display-->
+    <div id="copyright" title="Developer : SOLVEr"> Copyright &copy; SOLVE The Virtual Lab @ NITK Surathkal </div>
+
+</div>
+
+</body>
+</html>
+
